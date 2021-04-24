@@ -19,14 +19,14 @@ const (
 )
 
 var (
-	localWLog *WLog
+	localWLog    *WLog
 	onceInitWLog = sync.Once{}
 
 	localDiscard = Log{createDiscardLogger().WithField(keyLocalMethod, "discard")}
 )
 
 // DevEnabled can make all dev logger print to ioutil.Discard
-var DevEnabled = true 
+var DevEnabled = true
 
 // Log are used to print devOnly Logs, all results will be print to stdout
 func (m LocalWLogMethod) Log(fingerPrints ...string) (entry Log) {
@@ -41,7 +41,6 @@ func (m LocalWLogMethod) Log(fingerPrints ...string) (entry Log) {
 	}
 
 	return Log{
-		localWLog.Common(fingerPrints ...).WithField(keyLocalMethod, m),
+		localWLog.Common(fingerPrints...).WithField(keyLocalMethod, m),
 	}
 }
-

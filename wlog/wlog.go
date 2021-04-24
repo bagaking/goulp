@@ -6,8 +6,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// CtxKey is the key where a log entry set in a context
-var CtxKey = struct{}{}
+var (
+	// CtxKeyCacheEntry is the key to cache log entry into a context
+	CtxKeyCacheEntry = struct{ CtxKeyCacheEntry struct{} }{}
+
+	// CtxKeyCacheMFP is the key to cache method and finger print into a context
+	CtxKeyCacheMFP = struct{ CtxKeyCacheMFP struct{} }{}
+)
 
 type (
 	// EntryMaker is the function which specified how wlog create a logger associated with a context
@@ -35,14 +40,33 @@ func (w *WLog) ByCtx(ctx context.Context, fingerPrints ...string) *logrus.Entry 
 	return insertFingerPrintToEntry(entry, fingerPrints)
 }
 
+// ByCtxAndCache returns the entry and cache it in the context
+func (w *WLog) ByCtxAndCache(ctx context.Context, fingerPrints ...string) (*logrus.Entry, context.Context) {
+	entry := w.ByCtx(ctx, fingerPrints...)
+	if entry == nil {
+		return nil, ctx
+	}
+	return entry, context.WithValue(ctx, CtxKeyCacheEntry, entry)
+}
+
+// ByCtxAndRemoveCache returns the entry and remove the cache of log entry in the context
+func (w *WLog) ByCtxAndRemoveCache(ctx context.Context, fingerPrints ...string) (*logrus.Entry, context.Context) {
+	entry := w.ByCtx(ctx, fingerPrints...)
+	if entry == nil {
+		return nil, ctx
+	}
+	ctxClear := context.WithValue(ctx, CtxKeyCacheEntry, nil)
+	return entry, boxMFPToCtx(ctxClear, entry)
+}
+
 // Common Create a new log entry with empty context
 func (w *WLog) Common(fingerPrints ...string) *logrus.Entry {
 	return w.ByCtx(nil, fingerPrints...)
 }
 
-func (w *WLog) makeEntry(ctx context.Context) *logrus.Entry {
+func (w *WLog) makeEntry(ctx context.Context) *logrus.Entry { // todo:
 	if ctx != nil {
-		if l := ctx.Value(CtxKey); l != nil {
+		if l := ctx.Value(CtxKeyCacheEntry); l != nil {
 			return l.(*logrus.Entry)
 		}
 	}
@@ -51,7 +75,7 @@ func (w *WLog) makeEntry(ctx context.Context) *logrus.Entry {
 		return w.entryMaker(ctx)
 	}
 
-	return w.defaultEntry
+	return unboxMFPfromCtx(ctx, w.defaultEntry)
 }
 
 // NewWLog create a new WLog instance
@@ -81,4 +105,3 @@ func NewWLog(entryMakerOrLogger interface{}) *WLog {
 
 	panic("invalid arguments: type error")
 }
-

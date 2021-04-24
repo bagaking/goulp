@@ -6,7 +6,7 @@ import (
 
 var (
 	// KeyMethod is the key which is used in context to sepcify the method
-	KeyMethod      = "method_"
+	KeyMethod = "method_"
 	// KeyFingerPrint is the key which is used in context to sepcify the finger prints
 	KeyFingerPrint = "finger_print_"
 )
@@ -25,5 +25,5 @@ func (l Log) Dev() Log {
 
 // WithFPAppends returns a new logger append fingerPrints to the origin logger
 func (l Log) WithFPAppends(fingerPrints ...string) Log {
-	return Log{ Entry:insertFingerPrintToEntry(l.Entry, fingerPrints) }
+	return Log{Entry: insertFingerPrintToEntry(l.Entry, fingerPrints)}
 }
