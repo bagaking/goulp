@@ -1,52 +1,47 @@
 package wlog
 
 import (
-	"os"
-
-	"github.com/sirupsen/logrus"
+	"sync"
 )
 
-var KeyLocalMethod = "local_"
+// LocalWLogMethod is used to specify the kinds of logger
+type LocalWLogMethod string
 
-var DevEnabled = false
+const (
+	keyLocalMethod = "local_"
 
-var localLogger *logrus.Entry
+	// LDev can used to print debug messages
+	LDev LocalWLogMethod = "dev"
+	// LInit can used to print init messages
+	LInit LocalWLogMethod = "init"
+	// LExit can used to print exit messages
+	LExit LocalWLogMethod = "exit"
+)
 
-func init() {
-	logger := logrus.New()
-	logger.Formatter = &logrus.TextFormatter{
-		ForceColors:   true,
-		DisableColors: false,
-		FullTimestamp: true,
-	}
-	localLogger = logger.WithField(KeyLocalMethod, "custom")
-	localLogger.Logger.SetOutput(os.Stdout)
-}
+var (
+	localWLog *WLog
+	onceInitWLog = sync.Once{}
 
-func getL() (entry *logrus.Entry) {
-	return localLogger
-}
+	localDiscard = Log{createDiscardLogger().WithField(keyLocalMethod, "discard")}
+)
 
-func LPrint(localMethod string, fmtOrMsg string, args ...interface{}) {
-	l := getL().WithField(KeyLocalMethod, localMethod)
-	if len(args) > 0 {
-		l.Infof(fmtOrMsg, args...)
-		return
-	}
-	l.Info(fmtOrMsg)
-}
+// DevEnabled can make all dev logger print to ioutil.Discard
+var DevEnabled = true 
 
-func LDev(fmtOrMsg string, args ...interface{}) {
+// Log are used to print devOnly Logs, all results will be print to stdout
+func (m LocalWLogMethod) Log(fingerPrints ...string) (entry Log) {
 	if !DevEnabled {
-		return
+		return localDiscard
 	}
-	LPrint("dev", fmtOrMsg, args...)
+
+	if localWLog == nil {
+		onceInitWLog.Do(func() {
+			localWLog = NewWLog(createStdoutLogger())
+		})
+	}
+
+	return Log{
+		localWLog.Common(fingerPrints ...).WithField(keyLocalMethod, m),
+	}
 }
 
-func LInit(fmtOrMsg string, args ...interface{}) {
-	LPrint("init", fmtOrMsg, args...)
-}
-
-func LExit(fmtOrMsg string, args ...interface{}) {
-	LPrint("exit", fmtOrMsg, args...)
-}
