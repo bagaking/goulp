@@ -75,7 +75,7 @@ func (w *WLog) makeEntry(ctx context.Context) *logrus.Entry { // todo:
 		return w.entryMaker(ctx)
 	}
 
-	return unboxMFPfromCtx(ctx, w.defaultEntry)
+	return unboxMFPFromCtx(ctx, w.defaultEntry)
 }
 
 // NewWLog create a new WLog instance
