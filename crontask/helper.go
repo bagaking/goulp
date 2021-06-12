@@ -1,8 +1,9 @@
 package crontask
 
 import (
-	"github.com/robfig/cron/v3"
 	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 func getDuration(crontab Crontab, parser cron.Parser) (time.Duration, error) {

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/bagaking/goulp/wlog"
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
-	"sync"
 )
 
 type (
@@ -25,9 +26,8 @@ type (
 )
 
 var (
-	ErrJobNotFound       = errors.New("job cannot be found")
-	ErrRegDuplicated     = errors.New("duplicated Job key are not allowed")
-
+	ErrJobNotFound   = errors.New("job cannot be found")
+	ErrRegDuplicated = errors.New("duplicated Job key are not allowed")
 
 	ErrRegValidateFailed = errors.New("register validate failed")
 )

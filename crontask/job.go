@@ -2,12 +2,13 @@ package crontask
 
 import (
 	"context"
+
 	"github.com/bagaking/goulp/wlog"
 )
 
 type (
 	Job struct {
-		ID      int64
+		ID int64
 
 		JobMeta
 
