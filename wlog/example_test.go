@@ -7,7 +7,12 @@ import (
 
 func TestExample(t *testing.T) {
 	LDev.Log().Debug("dev msg 1")
-	NewWLog(createStderrLogger()).Common().Info("dev msg 2")
+	wlog, err := NewWLog(createStderrLogger())
+	if err != nil {
+		panic(err)
+	}
+
+	wlog.Common().Info("dev msg 2")
 
 	Common("ok").Info("print by default \\ wlog instance")
 	Common("ok").Dev().Info("print by dev \\ wlog instance")

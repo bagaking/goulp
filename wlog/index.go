@@ -8,7 +8,11 @@ import (
 var DefaultWLog *WLog
 
 func init() {
-	DefaultWLog = NewWLog(createTextLogger())
+	wlog, err := NewWLog(createTextLogger())
+	if err != nil {
+		panic(err)
+	}
+	DefaultWLog = wlog
 }
 
 // SetEntryGetter sets the EntryMaker of default wlog instance

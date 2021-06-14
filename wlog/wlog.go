@@ -2,6 +2,7 @@ package wlog
 
 import (
 	"context"
+	"errors"
 
 	"github.com/sirupsen/logrus"
 )
@@ -12,6 +13,9 @@ var (
 
 	// CtxKeyCacheMFP is the key to cache method and finger print into a context
 	CtxKeyCacheMFP = struct{ CtxKeyCacheMFP struct{} }{}
+
+	ErrLackOfEntryMakerOrLogger = errors.New("invalid arguments, entryMakerOrLogger must be given")
+	ErrArgumentTypeNotMatch     = errors.New("invalid arguments: type error")
 )
 
 type (
@@ -64,6 +68,14 @@ func (w *WLog) Common(fingerPrints ...string) *logrus.Entry {
 	return w.ByCtx(nil, fingerPrints...)
 }
 
+func (w *WLog) Logger() *logrus.Logger {
+	return w.defaultEntry.Logger
+}
+
+func (w *WLog) SetLevel(level logrus.Level) {
+	w.Logger().SetLevel(level)
+}
+
 func (w *WLog) makeEntry(ctx context.Context) *logrus.Entry { // todo:
 	if ctx != nil {
 		if l := ctx.Value(CtxKeyCacheEntry); l != nil {
@@ -80,28 +92,28 @@ func (w *WLog) makeEntry(ctx context.Context) *logrus.Entry { // todo:
 
 // NewWLog create a new WLog instance
 // argument can be EntryMaker, *logrus.Logger or nil
-func NewWLog(entryMakerOrLogger interface{}) *WLog {
+func NewWLog(entryMakerOrLogger interface{}) (*WLog, error) {
 	if entryMakerOrLogger == nil {
-		panic("invalid arguments: entryMakerOrLogger must be given")
+		return nil, ErrLackOfEntryMakerOrLogger
 	}
 
 	if em, ok := entryMakerOrLogger.(EntryMaker); ok {
 		return &WLog{
 			entryMaker: em,
-		}
+		}, nil
 	}
 
 	if entry, ok := entryMakerOrLogger.(*logrus.Entry); ok {
 		return &WLog{
 			defaultEntry: entry,
-		}
+		}, nil
 	}
 
 	if logger, ok := entryMakerOrLogger.(*logrus.Logger); ok {
 		return &WLog{
 			defaultEntry: logger.WithField(KeyMethod, "-"),
-		}
+		}, nil
 	}
 
-	panic("invalid arguments: type error")
+	return nil, ErrArgumentTypeNotMatch
 }

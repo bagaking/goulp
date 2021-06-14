@@ -2,6 +2,7 @@ package confread
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/bagaking/gotools/file/fpth"
@@ -33,5 +34,9 @@ func Read(fileName string, out interface{}, positions ...string) error {
 		return ErrNotFound
 	}
 
-	return TryAllUnmarshalers(data, out)
+	if err := TryAllUnmarshalers(data, out); err != nil {
+		return fmt.Errorf("unmarshal failed, %w", err)
+	}
+
+	return nil
 }
