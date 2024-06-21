@@ -97,3 +97,45 @@ name: gogo
 		t.Errorf("LoadYAML(%q) profile.user.name = %q, want %q", mainYAML, config.Profile.User.Name, "gogo")
 	}
 }
+
+func TestLoadYAMLIgnoresUnknownFieldsAfterIncludeExpansion(t *testing.T) {
+	mainYAML := `
+name: main
+unknown_root: ignored
+profile: !include profile.yaml
+`
+	profileYAML := `
+user: gogo
+unknown_profile: ignored
+`
+
+	fileSystem := map[string][]byte{
+		"profile.yaml": []byte(profileYAML),
+	}
+	mockReadFile := func(filename string) ([]byte, error) {
+		data, ok := fileSystem[filename]
+		if !ok {
+			return nil, os.ErrNotExist
+		}
+		return data, nil
+	}
+
+	type Config struct {
+		Name    string `yaml:"name"`
+		Profile struct {
+			User string `yaml:"user"`
+		} `yaml:"profile"`
+	}
+
+	var config Config
+	if err := LoadYAML([]byte(mainYAML), ".", &config, mockReadFile); err != nil {
+		t.Fatalf("LoadYAML(%q) error = %v, want nil", mainYAML, err)
+	}
+
+	if config.Name != "main" {
+		t.Errorf("LoadYAML(%q) name = %q, want %q", mainYAML, config.Name, "main")
+	}
+	if config.Profile.User != "gogo" {
+		t.Errorf("LoadYAML(%q) profile.user = %q, want %q", mainYAML, config.Profile.User, "gogo")
+	}
+}
