@@ -78,6 +78,10 @@ func processNode(node *yaml.Node, baseDir string, readFile FileReader) error {
 			return err
 		}
 
+		if err := processNode(&includedNode, filepath.Dir(includePath), readFile); err != nil {
+			return err
+		}
+
 		*node = includedNode
 	}
 

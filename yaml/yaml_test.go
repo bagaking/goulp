@@ -54,3 +54,46 @@ i_dont_care: 123
 		t.Errorf("Expected include.key to be 'gogo', got '%s'", config.K2.User)
 	}
 }
+
+func TestLoadYAMLNestedIncludeUsesIncludedFileDir(t *testing.T) {
+	mainYAML := `
+name: main
+profile: !include configs/profile.yaml
+`
+	profileYAML := `
+user: !include user.yaml
+`
+	userYAML := `
+name: gogo
+`
+
+	fileSystem := map[string][]byte{
+		"configs/profile.yaml": []byte(profileYAML),
+		"configs/user.yaml":    []byte(userYAML),
+	}
+	mockReadFile := func(filename string) ([]byte, error) {
+		data, ok := fileSystem[filename]
+		if !ok {
+			return nil, os.ErrNotExist
+		}
+		return data, nil
+	}
+
+	type Config struct {
+		Name    string `yaml:"name"`
+		Profile struct {
+			User struct {
+				Name string `yaml:"name"`
+			} `yaml:"user"`
+		} `yaml:"profile"`
+	}
+
+	var config Config
+	if err := LoadYAML([]byte(mainYAML), ".", &config, mockReadFile); err != nil {
+		t.Fatalf("LoadYAML(%q) error = %v, want nil", mainYAML, err)
+	}
+
+	if config.Profile.User.Name != "gogo" {
+		t.Errorf("LoadYAML(%q) profile.user.name = %q, want %q", mainYAML, config.Profile.User.Name, "gogo")
+	}
+}
