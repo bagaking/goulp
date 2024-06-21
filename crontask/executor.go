@@ -55,7 +55,7 @@ func (e *executor) Parser() cron.Parser {
 }
 
 func (e *executor) JobKeys() []string {
-	keys := make([]string, len(e.jobs))
+	keys := make([]string, 0, len(e.jobs))
 	for k := range e.jobs {
 		keys = append(keys, k)
 	}
@@ -105,8 +105,10 @@ func (e *executor) Register(ctx context.Context, jobMeta JobMeta) error {
 	}
 
 	// todo: reg to persist Job
+	if _, err := e.cron.AddJob(job.Crontab, job); err != nil {
+		return fmt.Errorf("%w, key= %s, crontab= %s, err= %v", ErrRegValidateFailed, job.Key, job.Crontab, err)
+	}
 	e.jobs[job.Key] = job
-	_, _ = e.cron.AddJob(job.Crontab, job)
 
 	logger.Infof("register job success, job= %s", job.Key)
 	return nil
