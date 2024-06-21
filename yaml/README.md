@@ -83,8 +83,9 @@ err := yaml.LoadYAML([]byte("name: app\nprofile: !include profile.yaml\n"), ".",
 
 ## Boundaries
 
-- Unknown YAML fields are rejected because the decoder enables
-  `KnownFields(true)`.
+- `!include` directives are processed through `yaml.Node` parsing before the
+  result is decoded into the destination value; unknown fields in the final
+  output struct are currently not strictly rejected by this helper.
 - Includes may be nested; nested relative paths are resolved from the included
   file's directory.
 - The package expands YAML includes before decoding. It does not watch files,

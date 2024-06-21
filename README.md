@@ -207,8 +207,9 @@ profile: !include profile.yaml
   file extension.
 - `crontask` wraps in-process cron scheduling only. It does not provide
   persistence, distributed locking, or cross-process coordination.
-- `yaml.LoadYAML` enables `KnownFields(true)`, so unknown YAML fields return
-  decode errors.
+- `yaml.LoadYAML` processes `!include` directives through `yaml.Node` parsing
+  before decoding into the destination value; unknown fields in the final
+  output struct are currently not strictly rejected by this helper.
 - `wlog` is built on `logrus`; it does not replace `logrus` configuration for
   applications that need custom formatters, hooks, or outputs.
 
