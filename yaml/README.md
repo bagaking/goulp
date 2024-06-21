@@ -1,87 +1,100 @@
-# YAML 文件处理库
+# goulp/yaml
 
-## 简介
+`github.com/bagaking/goulp/yaml` loads YAML into Go structs and resolves
+recursive `!include` tags before decoding. It is a package inside the `goulp`
+module, not a standalone command.
 
-这个库提供了读取和解析 YAML 文件的功能，并支持通过 `!include` 标签包含其他文件。它可以帮助开发者更方便地处理复杂的 YAML 配置文件。
+## Install
 
-## 功能
-
-- 读取并解析 YAML 文件
-- 支持 `!include` 标签，用于包含其他 YAML 文件
-- 自定义文件读取函数
-
-## 安装
-
-使用 `go get` 命令安装：
-
-```
-go get -u github.com/bagaking/goulp
+```sh
+go get github.com/bagaking/goulp
 ```
 
-## 使用方法
+Import the package directly:
 
-### 读取并解析 YAML 文件
+```go
+import "github.com/bagaking/goulp/yaml"
+```
+
+## Load A File
+
+`LoadYAMLFile` reads a YAML file from disk. Relative `!include` paths are
+resolved from the directory of the file that contains the include.
 
 ```go
 package main
 
 import (
-    "fmt"
-    "log"
-    "github.com/bagaking/goulp/yaml"
+	"log"
+
+	"github.com/bagaking/goulp/yaml"
 )
 
 type Config struct {
-    // 定义你的配置结构体
+	Name    string `yaml:"name"`
+	Profile struct {
+		User string `yaml:"user"`
+	} `yaml:"profile"`
 }
 
 func main() {
-    var config Config
-    err := yaml.LoadYAMLFile("config.yaml", &config)
-    if err != nil {
-        log.Fatalf("error: %v", err)
-    }
-    fmt.Printf("Parsed config: %+v\n", config)
+	var cfg Config
+	if err := yaml.LoadYAMLFile("config.yaml", &cfg); err != nil {
+		log.Fatal(err)
+	}
 }
 ```
 
-### 支持 `!include` 标签
-
-在你的 YAML 文件中，可以使用 `!include` 标签来包含其他文件：
+Example input:
 
 ```yaml
-database:
-  host: localhost
-  port: 5432
-  credentials: !include credentials.yaml
+name: app
+profile: !include profile.yaml
 ```
 
-## 示例
-
-假设有以下两个文件：
-
-**config.yaml**
+`profile.yaml`:
 
 ```yaml
-database:
-  host: localhost
-  port: 5432
-  credentials: !include credentials.yaml
+user: gogo
 ```
 
-**credentials.yaml**
+## Use A Custom Reader
 
-```yaml
-username: admin
-password: secret
+`LoadYAML` accepts raw YAML bytes, a base directory for relative includes, and a
+`FileReader`. Use this path when tests or embedded files should control how
+include files are read.
+
+```go
+files := map[string][]byte{
+	"profile.yaml": []byte("user: gogo\n"),
+}
+
+readFile := func(filename string) ([]byte, error) {
+	data, ok := files[filename]
+	if !ok {
+		return nil, os.ErrNotExist
+	}
+	return data, nil
+}
+
+var cfg Config
+err := yaml.LoadYAML([]byte("name: app\nprofile: !include profile.yaml\n"), ".", &cfg, readFile)
 ```
 
-使用 `LoadYAMLFile` 函数读取 `config.yaml` 文件后，`credentials.yaml` 文件的内容会被包含进来。
+## Boundaries
 
-## 贡献
+- Unknown YAML fields are rejected because the decoder enables
+  `KnownFields(true)`.
+- Includes may be nested; nested relative paths are resolved from the included
+  file's directory.
+- The package expands YAML includes before decoding. It does not watch files,
+  merge multiple top-level config files, or provide environment interpolation.
 
-欢迎贡献代码！请提交 Pull Request 或报告 Issue。
+## Validation
 
-## 许可证
+From the repository root:
 
-该项目使用 MIT 许可证。详情请参阅 [LICENSE](./LICENSE) 文件。
+```sh
+go test ./yaml
+go test ./...
+```
