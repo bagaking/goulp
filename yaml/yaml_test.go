@@ -168,6 +168,74 @@ profile: !include missing.yaml
 	}
 }
 
+func TestLoadYAMLReturnsIncludeCycleErrorForDirectCycle(t *testing.T) {
+	mainYAML := `
+profile: !include profile.yaml
+`
+	profileYAML := `
+user: !include profile.yaml
+`
+
+	fileSystem := map[string][]byte{
+		"profile.yaml": []byte(profileYAML),
+	}
+	mockReadFile := func(filename string) ([]byte, error) {
+		data, ok := fileSystem[filename]
+		if !ok {
+			return nil, os.ErrNotExist
+		}
+		return data, nil
+	}
+
+	type Config struct {
+		Profile struct {
+			User string `yaml:"user"`
+		} `yaml:"profile"`
+	}
+
+	var config Config
+	err := LoadYAML([]byte(mainYAML), ".", &config, mockReadFile)
+	if !errors.Is(err, ErrIncludeCycle) {
+		t.Fatalf("LoadYAML(%q) error = %v, want errors.Is(err, %v)", mainYAML, err, ErrIncludeCycle)
+	}
+}
+
+func TestLoadYAMLReturnsIncludeCycleErrorForNestedCycle(t *testing.T) {
+	mainYAML := `
+profile: !include configs/profile.yaml
+`
+	profileYAML := `
+user: !include ../users/gogo.yaml
+`
+	userYAML := `
+profile: !include ../configs/profile.yaml
+`
+
+	fileSystem := map[string][]byte{
+		"configs/profile.yaml": []byte(profileYAML),
+		"users/gogo.yaml":      []byte(userYAML),
+	}
+	mockReadFile := func(filename string) ([]byte, error) {
+		data, ok := fileSystem[filepath.Clean(filename)]
+		if !ok {
+			return nil, os.ErrNotExist
+		}
+		return data, nil
+	}
+
+	type Config struct {
+		Profile struct {
+			User string `yaml:"user"`
+		} `yaml:"profile"`
+	}
+
+	var config Config
+	err := LoadYAML([]byte(mainYAML), ".", &config, mockReadFile)
+	if !errors.Is(err, ErrIncludeCycle) {
+		t.Fatalf("LoadYAML(%q) error = %v, want errors.Is(err, %v)", mainYAML, err, ErrIncludeCycle)
+	}
+}
+
 func TestLoadYAMLIgnoresUnknownFieldsAfterIncludeExpansion(t *testing.T) {
 	mainYAML := `
 name: main

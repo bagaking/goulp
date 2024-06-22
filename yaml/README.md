@@ -88,6 +88,7 @@ err := yaml.LoadYAML([]byte("name: app\nprofile: !include profile.yaml\n"), ".",
   output struct are currently not strictly rejected by this helper.
 - Includes may be nested; nested relative paths are resolved from the included
   file's directory.
+- Recursive include cycles fail with `ErrIncludeCycle`.
 - The package expands YAML includes before decoding. It does not watch files,
   merge multiple top-level config files, or provide environment interpolation.
 

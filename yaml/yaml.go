@@ -2,12 +2,17 @@ package yaml
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
+
+// ErrIncludeCycle reports a recursive !include chain.
+var ErrIncludeCycle = errors.New("yaml include cycle")
 
 // FileReader 定义文件读取函数类型
 type FileReader func(filename string) ([]byte, error)
@@ -43,7 +48,7 @@ func LoadYAML(data []byte, baseDir string, out any, readFile FileReader) error {
 			return err
 		}
 
-		if err := processNode(&node, baseDir, readFile); err != nil {
+		if err := processNode(&node, baseDir, readFile, make(map[string]bool)); err != nil {
 			return err
 		}
 
@@ -56,16 +61,19 @@ func LoadYAML(data []byte, baseDir string, out any, readFile FileReader) error {
 }
 
 // processNode 处理 YAML 节点，支持 !include 标签
-// node: 当前处理的 YAML 节点
-// baseDir: 基础目录，用于解析相对路径
-// readFile: 文件读取函数
-// processNode 处理 YAML 节点，支持 !include 标签
-func processNode(node *yaml.Node, baseDir string, readFile FileReader) error {
+func processNode(node *yaml.Node, baseDir string, readFile FileReader, includeStack map[string]bool) error {
 	if node.Kind == yaml.ScalarNode && node.Tag == "!include" {
 		includePath := node.Value
 		if !filepath.IsAbs(includePath) {
 			includePath = filepath.Join(baseDir, includePath)
 		}
+		includePath = filepath.Clean(includePath)
+
+		if includeStack[includePath] {
+			return fmt.Errorf("%w: %s", ErrIncludeCycle, includePath)
+		}
+		includeStack[includePath] = true
+		defer delete(includeStack, includePath)
 
 		data, err := readFile(includePath)
 
@@ -78,7 +86,7 @@ func processNode(node *yaml.Node, baseDir string, readFile FileReader) error {
 			return err
 		}
 
-		if err := processNode(&includedNode, filepath.Dir(includePath), readFile); err != nil {
+		if err := processNode(&includedNode, filepath.Dir(includePath), readFile, includeStack); err != nil {
 			return err
 		}
 
@@ -86,7 +94,7 @@ func processNode(node *yaml.Node, baseDir string, readFile FileReader) error {
 	}
 
 	for _, child := range node.Content {
-		if err := processNode(child, baseDir, readFile); err != nil {
+		if err := processNode(child, baseDir, readFile, includeStack); err != nil {
 			return err
 		}
 	}

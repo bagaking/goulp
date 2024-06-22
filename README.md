@@ -15,7 +15,7 @@ The current codebase targets Go modules and declares `go 1.22` in `go.mod`.
 | `crontask` | Register and run keyed cron jobs on top of `robfig/cron/v3`. | `NewExecutor`, `JobMeta`, `Punch`, `RegValidator`, `CtxMaker`, registration and lookup errors |
 | `jsonex` | Re-export a `json-iterator/go` configuration compatible with the standard library. | `Marshal`, `MarshalToString`, `MarshalIndent`, `Unmarshal`, `UnmarshalFromString`, `Get`, `NewEncoder`, `NewDecoder`, `Valid`, `MustMarshalToString` |
 | `wlog` | Wrap `logrus` entries with context-aware fingerprints and local dev logging helpers. | `NewWLog`, `Common`, `ByCtx`, `ByCtxAndCache`, `ByCtxAndRemoveCache`, `Log`, `WLog`, `LDev`, `LInit`, `LExit` |
-| `yaml` | Load YAML files or bytes with recursive `!include` support. | `LoadYAMLFile`, `LoadYAML`, `FileReader`, `IncludeTag` |
+| `yaml` | Load YAML files or bytes with recursive `!include` support. | `LoadYAMLFile`, `LoadYAML`, `FileReader`, `IncludeTag`, `ErrIncludeCycle` |
 
 ## Install
 
@@ -210,6 +210,7 @@ profile: !include profile.yaml
 - `yaml.LoadYAML` processes `!include` directives through `yaml.Node` parsing
   before decoding into the destination value; unknown fields in the final
   output struct are currently not strictly rejected by this helper.
+- recursive include cycles fail with `ErrIncludeCycle`.
 - `wlog` is built on `logrus`; it does not replace `logrus` configuration for
   applications that need custom formatters, hooks, or outputs.
 
