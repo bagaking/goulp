@@ -78,12 +78,12 @@ func processNode(node *yaml.Node, baseDir string, readFile FileReader, includeSt
 		data, err := readFile(includePath)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("read yaml include %q: %w", includePath, err)
 		}
 
 		var includedNode yaml.Node
 		if err = yaml.Unmarshal(data, &includedNode); err != nil {
-			return err
+			return fmt.Errorf("parse yaml include %q: %w", includePath, err)
 		}
 
 		if err := processNode(&includedNode, filepath.Dir(includePath), readFile, includeStack); err != nil {

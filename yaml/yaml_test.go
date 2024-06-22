@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -159,12 +160,42 @@ profile: !include missing.yaml
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("LoadYAML(%q) error = %v, want errors.Is(err, %v)", mainYAML, err, os.ErrNotExist)
 	}
+	if !strings.Contains(err.Error(), "missing.yaml") {
+		t.Fatalf("LoadYAML(%q) error = %v, want include path in error", mainYAML, err)
+	}
 
 	if len(readFilenames) != 1 {
 		t.Fatalf("LoadYAML(%q) read filenames count = %d, want %d", mainYAML, len(readFilenames), 1)
 	}
 	if readFilenames[0] != "missing.yaml" {
 		t.Errorf("LoadYAML(%q) read filename = %q, want %q", mainYAML, readFilenames[0], "missing.yaml")
+	}
+}
+
+func TestLoadYAMLReturnsParseErrorForMalformedInclude(t *testing.T) {
+	mainYAML := `
+profile: !include malformed.yaml
+`
+	mockReadFile := func(filename string) ([]byte, error) {
+		if filename != "malformed.yaml" {
+			return nil, os.ErrNotExist
+		}
+		return []byte("profile: [\n"), nil
+	}
+
+	type Config struct {
+		Profile struct {
+			User string `yaml:"user"`
+		} `yaml:"profile"`
+	}
+
+	var config Config
+	err := LoadYAML([]byte(mainYAML), ".", &config, mockReadFile)
+	if err == nil {
+		t.Fatalf("LoadYAML(%q) error = nil, want parse error", mainYAML)
+	}
+	if !strings.Contains(err.Error(), "malformed.yaml") {
+		t.Fatalf("LoadYAML(%q) error = %v, want include path in error", mainYAML, err)
 	}
 }
 
