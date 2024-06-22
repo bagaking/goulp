@@ -59,6 +59,24 @@ func TestReadReturnsErrNotFoundWhenAllCandidatesAreMissing(t *testing.T) {
 	}
 }
 
+func TestReadReturnsReadErrorWhenCandidateIsNotAFile(t *testing.T) {
+	fileName := "app.yaml"
+	root := t.TempDir()
+	configPath := filepath.Join(root, fileName)
+	if err := os.MkdirAll(configPath, 0o755); err != nil {
+		t.Fatalf("os.MkdirAll(%q) error = %v, want nil", configPath, err)
+	}
+
+	var got readTestConfig
+	err := Read(fileName, &got, root)
+	if err == nil {
+		t.Fatalf("Read(%q, positions %q) error = nil, want read error", fileName, []string{root})
+	}
+	if errors.Is(err, ErrNotFound) {
+		t.Fatalf("Read(%q, positions %q) error = %v, want non-ErrNotFound read error", fileName, []string{root}, err)
+	}
+}
+
 func writeReadTestConfig(t *testing.T, dir, fileName, contents string) {
 	t.Helper()
 

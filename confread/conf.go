@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/bagaking/gotools/file/fpth"
 )
@@ -27,6 +28,9 @@ func Read(fileName string, out interface{}, positions ...string) error {
 		if err == nil {
 			data = result
 			break
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("read config %q: %w", confPth, err)
 		}
 	}
 
