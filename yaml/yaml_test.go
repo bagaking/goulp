@@ -3,6 +3,7 @@ package yaml
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -96,6 +97,43 @@ name: gogo
 
 	if config.Profile.User.Name != "gogo" {
 		t.Errorf("LoadYAML(%q) profile.user.name = %q, want %q", mainYAML, config.Profile.User.Name, "gogo")
+	}
+}
+
+func TestLoadYAMLAbsoluteIncludeBypassesBaseDir(t *testing.T) {
+	baseDir := filepath.Join(t.TempDir(), "base")
+	includePath := filepath.Join(t.TempDir(), "profile.yaml")
+	mainYAML := "profile: !include " + includePath + "\n"
+	includedYAML := "user: gogo\n"
+
+	readFilenames := make([]string, 0, 1)
+	mockReadFile := func(filename string) ([]byte, error) {
+		readFilenames = append(readFilenames, filename)
+		if filename != includePath {
+			return nil, os.ErrNotExist
+		}
+		return []byte(includedYAML), nil
+	}
+
+	type Config struct {
+		Profile struct {
+			User string `yaml:"user"`
+		} `yaml:"profile"`
+	}
+
+	var config Config
+	if err := LoadYAML([]byte(mainYAML), baseDir, &config, mockReadFile); err != nil {
+		t.Fatalf("LoadYAML(%q, baseDir %q) error = %v, want nil", mainYAML, baseDir, err)
+	}
+
+	if config.Profile.User != "gogo" {
+		t.Errorf("LoadYAML(%q, baseDir %q) profile.user = %q, want %q", mainYAML, baseDir, config.Profile.User, "gogo")
+	}
+	if len(readFilenames) != 1 {
+		t.Fatalf("LoadYAML(%q, baseDir %q) read filenames count = %d, want %d", mainYAML, baseDir, len(readFilenames), 1)
+	}
+	if readFilenames[0] != includePath {
+		t.Errorf("LoadYAML(%q, baseDir %q) read filename = %q, want %q", mainYAML, baseDir, readFilenames[0], includePath)
 	}
 }
 
