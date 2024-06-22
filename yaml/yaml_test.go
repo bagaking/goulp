@@ -1,6 +1,7 @@
 package yaml
 
 import (
+	"errors"
 	"os"
 	"testing"
 )
@@ -95,6 +96,37 @@ name: gogo
 
 	if config.Profile.User.Name != "gogo" {
 		t.Errorf("LoadYAML(%q) profile.user.name = %q, want %q", mainYAML, config.Profile.User.Name, "gogo")
+	}
+}
+
+func TestLoadYAMLReturnsReadErrorForMissingInclude(t *testing.T) {
+	mainYAML := `
+profile: !include missing.yaml
+`
+
+	var readFilenames []string
+	mockReadFile := func(filename string) ([]byte, error) {
+		readFilenames = append(readFilenames, filename)
+		return nil, os.ErrNotExist
+	}
+
+	type Config struct {
+		Profile struct {
+			User string `yaml:"user"`
+		} `yaml:"profile"`
+	}
+
+	var config Config
+	err := LoadYAML([]byte(mainYAML), ".", &config, mockReadFile)
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("LoadYAML(%q) error = %v, want errors.Is(err, %v)", mainYAML, err, os.ErrNotExist)
+	}
+
+	if len(readFilenames) != 1 {
+		t.Fatalf("LoadYAML(%q) read filenames count = %d, want %d", mainYAML, len(readFilenames), 1)
+	}
+	if readFilenames[0] != "missing.yaml" {
+		t.Errorf("LoadYAML(%q) read filename = %q, want %q", mainYAML, readFilenames[0], "missing.yaml")
 	}
 }
 
